@@ -1,7 +1,7 @@
 DAYZ SERVER PERFORMANCE TUNING CHECKLIST
 ========================================================
 
-Author: Danny ("The Long Hunt") + Assistant
+Author: Danny ("The Long Hunt")
 Use this as a simple checklist + shareable guide for other server owners.
 
 This guide assumes:

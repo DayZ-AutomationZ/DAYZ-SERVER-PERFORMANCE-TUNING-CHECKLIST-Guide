@@ -1,4 +1,4 @@
-THE LONG HUNT - DAYZ SERVER PERFORMANCE TUNING CHECKLIST
+DAYZ SERVER PERFORMANCE TUNING CHECKLIST
 ========================================================
 
 Author: Danny ("The Long Hunt") + Assistant

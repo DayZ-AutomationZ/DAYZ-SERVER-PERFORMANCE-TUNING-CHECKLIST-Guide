@@ -1,0 +1,288 @@
+THE LONG HUNT - DAYZ SERVER PERFORMANCE TUNING CHECKLIST
+========================================================
+
+Author: Danny ("The Long Hunt") + Assistant
+Use this as a simple checklist + shareable guide for other server owners.
+
+This guide assumes:
+- ChernarusPlus
+- Expansion Core + CF
+- BaseBuildingPlus (BBP)
+- Typical modded environment (VPP, custom scripts, etc.)
+
+IMPORTANT NOTE
+--------------
+If your server runs fine: DO NOT change everything at once.
+Make small changes, restart, test, and only then continue.
+
+------------------------------------------------------------
+1. GLOBALS.XML (WORLD CLEANUP + AI LIMITS)
+------------------------------------------------------------
+File:
+    mpmissions\dayzOffline.chernarusplus\globals.xml
+
+GOAL:
+- Control max animals + infected.
+- Clean dead bodies and ruined items faster.
+- Reduce long-term clutter.
+
+RECOMMENDED VALUES (SAFE, PERFORMANCE-FRIENDLY)
+-----------------------------------------------
+Find these lines and adjust:
+
+    <var name="AnimalMaxCount" type="0" value="..."/>
+    <var name="ZombieMaxCount" type="0" value="..."/>
+    <var name="CleanupLifetimeDeadAnimal" type="0" value="..."/>
+    <var name="CleanupLifetimeDeadInfected" type="0" value="..."/>
+    <var name="CleanupLifetimeDeadPlayer" type="0" value="..."/>
+    <var name="CleanupLifetimeDefault" type="0" value="..."/>
+    <var name="CleanupLifetimeRuined" type="0" value="..."/>
+
+Suggested:
+    AnimalMaxCount              = 250–350   (was 500+)
+    ZombieMaxCount              = 600–800   (was 1000+)
+
+    CleanupLifetimeDeadAnimal   = 600       (10 minutes)
+    CleanupLifetimeDeadInfected = 240       (4 minutes)
+    CleanupLifetimeDeadPlayer   = 3600      (1 hour)
+    CleanupLifetimeDefault      = 45–300    (dropped junk)
+    CleanupLifetimeRuined       = 120       (2 minutes)
+
+Why?
+- Lower AI caps = fewer entities simulated every second.
+- Faster cleanup of corpses & ruined stuff = less clutter & better FPS.
+- Shorter default lifetime keeps random trash from building up.
+
+------------------------------------------------------------
+2. TYPES.XML (ECONOMY DENSITY & GOLD LIFETIME)
+------------------------------------------------------------
+File (default):
+    mpmissions\dayzOffline.chernarusplus\db\types.xml
+or your own custom economy path.
+
+GOAL:
+- Avoid over-spawning loot.
+- Ensure dynamic items (like gold) despawn BEFORE restart.
+
+2.1. GOLD / SILVER LIFETIME (EXPANSION)
+---------------------------------------
+If you use Expansion gold/silver, make sure these classnames exist:
+
+    ExpansionGoldNugget
+    ExpansionGoldBar
+    (optional) ExpansionSilverNugget
+    (optional) ExpansionSilverBar
+
+Add or edit lifetime like this:
+
+    <!-- TLH GoldMine Recommended Settings -->
+
+    <type name="ExpansionGoldNugget">
+        <lifetime>20400</letime>  <!-- 6h restart minus 20 minutes -->
+        ...
+    </type>
+
+    <type name="ExpansionGoldBar">
+        <lifetime>20400</lifetime>
+        ...
+    </type>
+
+    <!-- Optional silver -->
+    <type name="ExpansionSilverNugget">
+        <lifetime>20400</lifetime>
+        ...
+    </type>
+
+    <type name="ExpansionSilverBar">
+        <lifetime>20400</lifetime>
+        ...
+    </type>
+
+Formula for different restart times:
+    lifetime = (restart_hours * 3600) - 1200
+
+Examples:
+    6h restart -> 6*3600 - 1200 = 20400
+    4h restart -> 4*3600 - 1200 = 12000
+    3h restart -> 3*3600 - 1200 = 8400
+
+Why?
+- Prevents gold from piling up and flooding the area with old spawns.
+
+2.2. LOOT DENSITY (GENERAL)
+---------------------------
+In types.xml, check high-frequency items like:
+- Ammunition
+- Tools
+- Clothes
+- Vehicles and parts
+
+Look for VERY high values:
+    <nominal>100</nominal>
+    <min>50</min>
+
+General rule of thumb:
+- Common items: nominal 20–40
+- Rare items: nominal 1–5
+- Vehicles: nominal 1–6 total
+
+Too many items = more entities, more persistence, slower cleanup, more CPU.
+
+------------------------------------------------------------
+3. EVENTS.XML (INFECTED / ANIMALS / DYNAMIC EVENTS)
+------------------------------------------------------------
+File:
+    mpmissions\dayzOffline.chernarusplus\events.xml
+
+GOAL:
+- Avoid insane zombie / animal bursts around players.
+- Reduce number of heavy static events if not needed.
+
+3.1. ZOMBIE EVENTS
+------------------
+Find zombie-related events, e.g.:
+    InfectedCity
+    InfectedVillage
+    InfectedIndustrial
+    InfectedPolice
+    InfectedArmy
+
+Typical heavy settings look like:
+    <nominal>50</nominal>
+    <min>25</min>
+    <max>250</max>
+
+Suggested performance-friendly range:
+    nominal: 10–25
+    min:     5–10
+    max:     20–40
+
+Keep towns and military areas dangerous, but do not turn the entire map
+into a constant infinite horde on every player.
+
+3.2. ANIMAL EVENTS
+------------------
+If you already have a high AnimalMaxCount, you don't need huge events.
+
+For each animal event (deer, boar, wolves, bears):
+- Keep horde sizes modest:
+    nominal: 3–6
+    min:     1–3
+    max:     6–8
+
+Wolves & bears are expensive AI. More is not always better.
+
+3.3. DISTANCERADIUS / SAFERADIUS
+--------------------------------
+Some events may use large values like:
+    <distanceradius>1000</distanceradius>
+    <saferadius>1000</saferadius>
+
+Large radiuses increase server work per spawn attempt.
+
+Recommended:
+    Most land-based events: 150–300
+    Helicopters / planes: can stay higher (500–1000)
+
+------------------------------------------------------------
+4. BASEBUILDINGPLUS (BBP) SETTINGS
+------------------------------------------------------------
+File (example):
+    $profile:BaseBuildingPlus\BBP_Settings.json
+or inside your server profile/mod config folder.
+
+KEY SETTINGS:
+--------------
+    "BBP_SetInfiniteLifetime": 1,
+
+Recommendation:
+    Set to 0 if your server is long-term and persistence grows huge.
+
+    "BBP_SetInfiniteLifetime": 0,
+
+Why?
+- Infinite lifetime means old or ruined base parts never clean up.
+- Over months this bloats the database and hurts performance.
+
+Also consider:
+- Disable vanilla fences/watchtowers if you don’t want double systems:
+    "BBP_DisableCraftVanillaFence": 1,
+    "BBP_DisableCraftVanillaWatchtower": 1,
+
+------------------------------------------------------------
+5. STATIC OBJECT SPAM (EXTRA MIXERS, PROPS, ETC.)
+------------------------------------------------------------
+Watch out for:
+- Scripts or config that spawn many static objects (e.g. 100+ cement mixers).
+- Old test code that still runs on live server.
+
+Checklist:
+- Check any custom scripts in init.c or custom .c files.
+- Look for loops that call CreateObject(...) many times.
+- Remove duplicated statics or use mapping tools instead.
+
+If you had something like 100+ extra cement mixers spawned, removing them
+is a BIG performance gain.
+
+------------------------------------------------------------
+6. VEHICLE LIMITS
+------------------------------------------------------------
+Vehicles are expensive to simulate and to save/load.
+
+Checklist:
+- Limit number of active vehicles (including helis/boats).
+- Use modest nominal values in types.xml:
+    Cars: total 4–10
+    Boats: 1–3
+    Helicopters: 1–3 (depending on server power)
+
+More vehicles = more physics, more persistence work, more bugs.
+
+------------------------------------------------------------
+7. VPP ADMIN TOOLS (AND SIMILAR MODS)
+------------------------------------------------------------
+VPP itself is fine if used properly. Just avoid heavy features running 24/7.
+
+Checklist:
+- Disable VPP killfeed if you use a different killfeed (e.g. Expansion).
+- Use ESP only when needed (not permanently on for multiple admins).
+- Turn off entity-wide ESP (zombies/animals) unless diagnosing.
+- Clean old VPP log files occasionally if they grow very large.
+
+------------------------------------------------------------
+8. CLEAN PERSISTENCE OCCASIONALLY (ADVANCED)
+------------------------------------------------------------
+If performance degrades badly over months, consider:
+
+- Fully backing up your server.
+- Wiping:
+    storage_1
+    types.bin
+    territories.bin
+    (and BBP persistence folders if bases are reset)
+
+DO THIS ONLY IF:
+- You know what you’re doing, or
+- You want to wipe bases and start fresh.
+
+------------------------------------------------------------
+9. GOLD MINE SCRIPT (TLH CUSTOM)
+------------------------------------------------------------
+The TLH gold mine script itself is lightweight, but ONLY if:
+- Gold has proper lifetime (see section 2.1).
+- An anti-spam check is used, e.g. CountExistingGoldInRadius().
+
+Checklist:
+- Ensure SpawnGoldMineLoot() only runs once per restart (call from main()).
+- Ensure you are not stacking additional spawners on top of it.
+
+------------------------------------------------------------
+10. CHANGE ONE THING AT A TIME
+------------------------------------------------------------
+Advice for you and other server owners:
+- Make a backup before changing core files (globals.xml, events.xml, types.xml).
+- Change 1–3 things at a time.
+- Restart server, test for 1–2 days, then continue.
+- Keep a simple changelog so you know what helped or hurt.
+
+END OF FILE
